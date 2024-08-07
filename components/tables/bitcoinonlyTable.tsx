@@ -7,7 +7,7 @@ import Risk from "@/components/layer/layerTableItemRisk";
 import TableHeader from "@/components/tables/tableHeader";
 import { BrowserView, MobileView, isMobile } from "react-device-detect";
 
-type TableTabKey = "Risk" | "Category" | "Type" | "Status";
+type TableTabKey = "Risk" | "Type" | "Status" | "Category";
 
 type TableItem = Layer | Infrastructure;
 
@@ -60,7 +60,7 @@ const BitcoinonlyTable = ({ data, headers }: Props) => {
     const [sortOrder, setSortOrder] = useState<{
         [key: string]: boolean | null;
     }>({});
-    const [mobileActiveTab, setMobileActiveTab] = useState<TableTabKey>("Type");
+    const [mobileActiveTab, setMobileActiveTab] = useState<TableTabKey>("Risk");
 
     useEffect(() => {
         // Default sorting by Name alphabetically on first load
@@ -194,8 +194,8 @@ const BitcoinonlyTable = ({ data, headers }: Props) => {
                 </div>
             </div>
             <MobileView className="flex justify-center">
-                <div className="justify-center lg:items-start gap-4 inline-flex py-3">
-                    {headers.slice(2).map((_item, ind) => {
+                <div className="justify-center lg:items-start gap-3 inline-flex py-3">
+                    {headers.slice(1).map((_item, ind) => {
                         const isAllowedTab = [
                             "Risk",
                             "Category",
@@ -246,7 +246,9 @@ const BitcoinonlyTable = ({ data, headers }: Props) => {
                                 }`}
                                 key={item.slug}
                                 onClick={() =>
-                                    handleRowClick(`/layers/${item.slug}`)
+                                    handleRowClick(`/${isLayer(item)
+                                        ? "layers"
+                                        : "infrastructure"}/${item.slug}`)
                                 }
                             >
                                 <td className="lg:px-6 px-4 py-4 font-semibold whitespace-nowrap border-r lg:border-r-0 border-stroke_tertiary text_table_important text-table_body">
@@ -260,25 +262,22 @@ const BitcoinonlyTable = ({ data, headers }: Props) => {
                                         </span>
                                     </div>
                                 </td>
-                                {!isMobile && (
-                                    <td className="relative px-2 border-stroke_tertiary text_table_important">
-                                        {isLayer(item) &&
-                                        item.underReview === "no" ? (
-                                            <Risk layer={item} />
-                                        ) : (
-                                            <div className="px-5 text_table_important">
-                                                Under review
-                                            </div>
-                                        )}
-                                    </td>
-                                )}
-                                {(!isMobile ||
-                                    mobileActiveTab === "Category") && (
-                                    <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
-                                        {isLayer(item)
-                                            ? "Layer"
-                                            : "Infrastructure"}
-                                    </td>
+                                {(!isMobile || mobileActiveTab === "Risk") && (
+                                     <td className="relative px-2 border-stroke_tertiary text_table_important">
+                                     {isLayer(item) ? (
+                                         item.underReview === "no" ? (
+                                             <Risk layer={item} />
+                                         ) : (
+                                            <div className="lg:px-5 px-1 text_table_important font-light">
+                                            Under review
+                                        </div>
+                                         )
+                                     ) : (
+                                         <div className="lg:px-5 px-1 text_table_important">
+                                             Not applicable
+                                         </div>
+                                     )}
+                                 </td>
                                 )}
                                 {(!isMobile || mobileActiveTab === "Type") && (
                                     <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
@@ -293,6 +292,14 @@ const BitcoinonlyTable = ({ data, headers }: Props) => {
                                     mobileActiveTab === "Status") && (
                                     <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
                                         {item.live}
+                                    </td>
+                                )}
+                                {(!isMobile ||
+                                    mobileActiveTab === "Category") && (
+                                    <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
+                                        {isLayer(item)
+                                            ? "Layer"
+                                            : "Infrastructure"}
                                     </td>
                                 )}
                             </tr>
