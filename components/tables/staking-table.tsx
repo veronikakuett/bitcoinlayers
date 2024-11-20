@@ -2,20 +2,26 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
-import { Layer } from "@/components/layer/layerProps";
-import { Infrastructure } from "@/components/infrastructure/infrastructureProps";
-import Risk from "@/components/layer/layerTableItemRisk";
 import TableHeader from "@/components/tables/tableHeader";
 import { MobileView, isMobile } from "react-device-detect";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
+import { InfrastructureProject, Project, Type } from "@/content/props";
+import useGetInfratvlCurrentAll from "@/hooks/use-get-infratvl-current-all";
+import AssessmentSnapshotDialog from "../infrastructure/assessment-snapshot/assessment-snapshot-dialog-table";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from "@/components/ui/card";
+import { DatabaseIcon } from "lucide-react";
 
-type TableTabKey = "Snapshot" | "Type" | "Status" | "Category";
-
-type TableItem = Layer | Infrastructure;
+type TableTabKey = "Snapshot" | "Type" | "Status" | "TVL";
 
 interface Props {
-    data: TableItem[];
+    data: Project[];
     headers: {
         name: string;
         showSorting: boolean;
@@ -24,12 +30,12 @@ interface Props {
     }[];
 }
 
-const isLayer = (item: TableItem): item is Layer => {
-    return (item as Layer).layerType !== undefined;
+const isLayer = (item: Project) => {
+    return item.type === Type.Layer;
 };
 
-const isInfrastructure = (item: TableItem): item is Infrastructure => {
-    return (item as Infrastructure).infrastructureType !== undefined;
+const isInfrastructure = (item: Project) => {
+    return item.type === Type.Infrastructure;
 };
 
 const LayerImage = ({ src, title }: { src: string; title: string }) => {
@@ -56,7 +62,7 @@ const LayerImage = ({ src, title }: { src: string; title: string }) => {
 
 const StakingTable = ({ data, headers }: Props) => {
     const [status, setStatus] = useQueryState("status", {
-        defaultValue: "Mainnet",
+        defaultValue: "testnet",
     });
     const [types] = useQueryState<string[]>("type", {
         defaultValue: [],
@@ -70,6 +76,27 @@ const StakingTable = ({ data, headers }: Props) => {
         defaultValue: "asc",
     });
 
+    const { data: balances } = useGetInfratvlCurrentAll();
+
+    const totaledBalances = useMemo(() => {
+        if (!balances) return {};
+
+        return balances.reduce(
+            (acc, balance) => {
+                const { infra_slug, total_amount } = balance;
+
+                if (!acc[infra_slug]) {
+                    acc[infra_slug] = { totalAmount: 0 };
+                }
+
+                acc[infra_slug].totalAmount += total_amount;
+
+                return acc;
+            },
+            {} as Record<string, { totalAmount: number }>,
+        );
+    }, [balances]);
+
     const [mobileActiveTab, setMobileActiveTab] =
         useState<TableTabKey>("Snapshot");
 
@@ -81,20 +108,20 @@ const StakingTable = ({ data, headers }: Props) => {
                     valueA = a.title.toLowerCase();
                     valueB = b.title.toLowerCase();
                     break;
-                case "Category":
-                    valueA = isLayer(a) ? "Layer" : "Infrastructure";
-                    valueB = isLayer(b) ? "Layer" : "Infrastructure";
+                case "TVL":
+                    valueA = totaledBalances[a.slug]?.totalAmount ?? -Infinity;
+                    valueB = totaledBalances[b.slug]?.totalAmount ?? -Infinity;
                     break;
                 case "Type":
                     valueA = isLayer(a)
-                        ? a.layerType
+                        ? a.type
                         : isInfrastructure(a)
-                          ? a.infrastructureType
+                          ? a.type
                           : "";
                     valueB = isLayer(b)
-                        ? b.layerType
+                        ? b.type
                         : isInfrastructure(b)
-                          ? b.infrastructureType
+                          ? b.type
                           : "";
                     break;
                 case "Status":
@@ -113,20 +140,20 @@ const StakingTable = ({ data, headers }: Props) => {
         if (types.length > 0) {
             filtered = filtered.filter((item) =>
                 types.includes(
-                    isLayer(item) ? item.layerType : item.infrastructureType,
+                    isLayer(item) ? item.entityType : item.entityType,
                 ),
             );
         }
 
         filtered = filtered.filter((item) => {
             if (!item.staking) return false;
-            if (status === "Mainnet") return item.live === "Mainnet";
-            if (status === "Testnet") return item.live !== "Mainnet";
+            if (status === "mainnet") return item.live === "Mainnet";
+            if (status === "testnet") return item.live !== "Mainnet";
             return true;
         });
 
         return filtered;
-    }, [data, sortBy, sortOrder, types, status]);
+    }, [data, sortBy, sortOrder, types, status, totaledBalances]);
 
     const handleSort = (header: string) => {
         if (sortBy === header) {
@@ -145,214 +172,190 @@ const StakingTable = ({ data, headers }: Props) => {
         (_item) => _item.name === mobileActiveTab || _item.name === "Name",
     );
 
+    const hasAssessment = (
+        project: Project,
+    ): project is InfrastructureProject => {
+        return (
+            project.type === Type.Infrastructure &&
+            !!project.assessment &&
+            project.assessment.length > 0
+        );
+    };
+
     return (
-        <div className="px-6 lg:px-0 w-full">
-            <div className="flex lg:mb-6 justify-center -mt-12 lg:mt-0 relative z-20">
-                <div className="justify-start items-start gap-4 inline-flex">
-                    <div
-                        className={`h-[30px] px-4 py-[5px] rounded-full border-2 justify-center items-center gap-1.5 flex cursor-pointer ${
-                            status === "Mainnet"
-                                ? "bg-white border-orange-600"
-                                : "border-slate-300"
-                        }`}
-                        onClick={() => setStatus("Mainnet")}
-                    >
-                        <div
-                            className={`text-center text-sm font-medium leading-tight ${
-                                status === "Mainnet"
-                                    ? "text-orange-600"
-                                    : "text-slate-600"
-                            }`}
-                        >
-                            Mainnet
-                        </div>
-                    </div>
-                    <div
-                        className={`h-[30px] rounded-full border-2 justify-center items-center gap-1 flex cursor-pointer ${
-                            status === "Testnet"
-                                ? "bg-white border-orange-600"
-                                : "border-slate-300"
-                        }`}
-                        onClick={() => setStatus("Testnet")}
-                    >
-                        <div className="grow shrink basis-0 h-[30px] px-4 py-[5px] justify-center items-center gap-1.5 flex">
-                            <div
-                                className={`text-center text-sm font-medium leading-tight ${
-                                    status === "Testnet"
-                                        ? "text-orange-600"
-                                        : "text-slate-600"
-                                }`}
-                            >
-                                Testnet
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        className={`h-[30px] rounded-full border-2 justify-center items-center gap-1 flex cursor-pointer ${
-                            status === "All"
-                                ? "bg-white border-orange-600"
-                                : "border-slate-300"
-                        }`}
-                        onClick={() => setStatus("All")}
-                    >
-                        <div className="grow shrink basis-0 h-[30px] px-4 py-[5px] justify-center items-center gap-1.5 flex">
-                            <div
-                                className={`text-center text-sm font-medium leading-tight ${
-                                    status === "All"
-                                        ? "text-orange-600"
-                                        : "text-slate-600"
-                                }`}
-                            >
-                                All
-                            </div>
-                        </div>
-                    </div>
+        <Card className="w-full">
+            <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row border-none">
+                <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
+                    <CardTitle className="flex">
+                        <DatabaseIcon className="mr-3" /> Staking
+                    </CardTitle>
+                    <CardDescription>
+                        Learn the tradeoffs for different staking projects
+                    </CardDescription>
                 </div>
-            </div>
-            <MobileView className="flex justify-center">
-                <div className="justify-center lg:items-start gap-3 inline-flex py-3">
-                    {headers.slice(1).map((_item, ind) => {
-                        const isAllowedTab = [
-                            "Snapshot",
-                            "Category",
-                            "Type",
-                            "Status",
-                        ].includes(_item.name);
-                        return (
-                            <div
-                                className={`h-[30px] px-4 py-[5px] rounded-full border-2 justify-center items-center gap-1.5 flex cursor-pointer ${
-                                    mobileActiveTab === _item.name
-                                        ? "bg-white border-orange-600"
-                                        : "border-slate-300"
-                                }`}
-                                onClick={() =>
-                                    isAllowedTab &&
-                                    handleMobileTabClick(
-                                        _item.name as TableTabKey,
-                                    )
-                                }
-                                key={ind}
-                            >
-                                <div
-                                    className={`text-center text-sm font-medium leading-tight ${
-                                        mobileActiveTab === _item.name
-                                            ? "text-orange-600"
-                                            : "text-slate-600"
+                <div className="flex">
+                    <button
+                        data-active={status === "mainnet"}
+                        className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6 min-w-[100px] sm:min-w-[150px]"
+                        onClick={() => setStatus("mainnet")}
+                    >
+                        <span className="text-xs text-muted-foreground">
+                            On mainnet
+                        </span>
+                        <span className="text-lg font-bold leading-none sm:text-3xl">
+                            {data
+                                .filter((item) => item.live === "Mainnet")
+                                .length.toLocaleString()}
+                        </span>
+                    </button>
+                    <button
+                        data-active={status === "testnet"}
+                        className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6 min-w-[100px] sm:min-w-[150px]"
+                        onClick={() => setStatus("testnet")}
+                    >
+                        <span className="text-xs text-muted-foreground">
+                            Coming soon
+                        </span>
+                        <span className="text-lg font-bold leading-none sm:text-3xl">
+                            {data
+                                .filter((item) => item.live !== "Mainnet")
+                                .length.toLocaleString()}
+                        </span>
+                    </button>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="overflow-x-auto bg-lightsecondary rounded-xl mx-auto border-none">
+                    <table className="bg-lightsecondary w-full text-sm text-left rtl:text-right rounded-xl">
+                        <TableHeader
+                            headers={isMobile ? mobileTableHeaders : headers}
+                            onSort={handleSort}
+                        />
+                        <tbody className="bg-white gap-x-8 border-t border-stroke_tertiary text_table_important">
+                            {sortAndFilterData.map((item, index) => (
+                                <tr
+                                    className={`cursor-pointer text_table_important ${
+                                        index !== sortAndFilterData.length - 1
+                                            ? "border-b border-stroke_tertiary"
+                                            : ""
                                     }`}
+                                    key={item.slug}
                                 >
-                                    {_item.mobileLabel}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </MobileView>
-            <div className="overflow-x-auto bg-lightsecondary rounded-xl mx-auto border border-stroke_tertiary">
-                <table className="bg-lightsecondary w-full text-sm text-left rtl:text-right rounded-xl">
-                    <TableHeader
-                        headers={isMobile ? mobileTableHeaders : headers}
-                        onSort={handleSort}
-                    />
-                    <tbody className="bg-white gap-x-8 border-t border-stroke_tertiary text_table_important">
-                        {sortAndFilterData.map((item, index) => (
-                            <tr
-                                className={`cursor-pointer border-b border-stroke_tertiary text_table_important ${
-                                    index === sortAndFilterData.length - 1
-                                        ? ""
-                                        : ""
-                                }`}
-                                key={item.slug}
-                            >
-                                <td className="lg:px-6 px-4 py-4 font-semibold whitespace-nowrap border-r lg:border-r-0 border-stroke_tertiary text_table_important text-table_body">
-                                    <Link
-                                        href={`/${
-                                            isLayer(item)
-                                                ? `layers/${item.slug}/#usecases`
-                                                : `infrastructure/${item.slug}`
-                                        }`}
-                                        className="flex items-center"
-                                    >
-                                        <LayerImage
-                                            src={`/logos/${item.slug}.png`}
-                                            title={item.title}
-                                        />
-                                        <span className="ml-2 truncate lg:word-break-none">
-                                            {item.title}
-                                        </span>
-                                    </Link>
-                                </td>
-                                {(!isMobile ||
-                                    mobileActiveTab === "Snapshot") && (
-                                    <td className="relative px-2 border-stroke_tertiary text_table_important">
-                                        Coming Soon
-                                        {/* {isLayer(item) ? (
-                                            item.underReview === "no" ? (
-                                                <Risk layer={item} />
+                                    <td className="lg:px-6 px-4 py-4 font-semibold whitespace-nowrap text_table_important text-table_body">
+                                        <Link
+                                            href={`/${
+                                                isLayer(item)
+                                                    ? `layers/${item.slug}/#usecases`
+                                                    : `infrastructure/${item.slug}`
+                                            }`}
+                                            className="flex items-center"
+                                        >
+                                            <LayerImage
+                                                src={`/logos/${item.slug}.png`}
+                                                title={item.title}
+                                            />
+                                            <span className="ml-2 truncate lg:word-break-none">
+                                                {item.title}
+                                            </span>
+                                        </Link>
+                                    </td>
+                                    {(!isMobile ||
+                                        mobileActiveTab === "Snapshot") && (
+                                        <td className="relative px-2 border-stroke_tertiary text_table_important">
+                                            {hasAssessment(item) ? (
+                                                <AssessmentSnapshotDialog
+                                                    infrastructure={item}
+                                                />
                                             ) : (
-                                                <div className="lg:px-5 px-1 text_table_important font-light">
-                                                    Under review
+                                                <div className="px-4">
+                                                    Coming Soon
                                                 </div>
-                                            )
-                                        ) : (
-                                            <div className="lg:px-5 px-1 text_table_important">
-                                                Not applicable
-                                            </div>
-                                        )} */}
-                                    </td>
-                                )}
-                                {(!isMobile || mobileActiveTab === "Type") && (
-                                    <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
-                                        <Link
-                                            href={`/${
-                                                isLayer(item)
-                                                    ? `layers/${item.slug}/#usecases`
-                                                    : `infrastructure/${item.slug}`
-                                            }`}
-                                        >
-                                            {isLayer(item)
-                                                ? item.layerType
-                                                : isInfrastructure(item)
-                                                  ? item.infrastructureType
-                                                  : ""}
-                                        </Link>
-                                    </td>
-                                )}
-                                {(!isMobile ||
-                                    mobileActiveTab === "Status") && (
-                                    <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
-                                        <Link
-                                            href={`/${
-                                                isLayer(item)
-                                                    ? `layers/${item.slug}/#usecases`
-                                                    : `infrastructure/${item.slug}`
-                                            }`}
-                                        >
-                                            {item.live}
-                                        </Link>
-                                    </td>
-                                )}
-                                {(!isMobile ||
-                                    mobileActiveTab === "Category") && (
-                                    <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
-                                        <Link
-                                            href={`/${
-                                                isLayer(item)
-                                                    ? `layers/${item.slug}/#usecases`
-                                                    : `infrastructure/${item.slug}`
-                                            }`}
-                                        >
-                                            {isLayer(item)
-                                                ? "Layer"
-                                                : "Infrastructure"}
-                                        </Link>
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                                            )}
+                                        </td>
+                                    )}
+                                    {(!isMobile ||
+                                        mobileActiveTab === "Type") && (
+                                        <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
+                                            <Link
+                                                href={`/${
+                                                    isLayer(item)
+                                                        ? `layers/${item.slug}/#usecases`
+                                                        : `infrastructure/${item.slug}`
+                                                }`}
+                                            >
+                                                {isLayer(item)
+                                                    ? item.entityType
+                                                    : isInfrastructure(item)
+                                                      ? item.entityType
+                                                      : ""}
+                                            </Link>
+                                        </td>
+                                    )}
+                                    {(!isMobile ||
+                                        mobileActiveTab === "Status") && (
+                                        <td className="lg:px-6 px-4 py-3 lg:py-4 border-stroke_tertiary text_table_important">
+                                            <Link
+                                                href={`/${
+                                                    isLayer(item)
+                                                        ? `layers/${item.slug}/#usecases`
+                                                        : `infrastructure/${item.slug}`
+                                                }`}
+                                            >
+                                                {item.live}
+                                            </Link>
+                                        </td>
+                                    )}
+                                    {(!isMobile ||
+                                        mobileActiveTab === "TVL") && (
+                                        <td className="lg:px-6 px-4 py-3 lg:py-4 border-r border-stroke_tertiary text_table_important">
+                                            <Link
+                                                href={`/${
+                                                    isLayer(item)
+                                                        ? `layers/${item.slug}/#usecases`
+                                                        : `infrastructure/${item.slug}`
+                                                }`}
+                                            >
+                                                {/* {item.underReview ||
+                                                Object.keys(totaledBalances).find(
+                                                    (key) =>
+                                                        key.toLowerCase() ===
+                                                        item.title.toLowerCase(),
+                                                ) === undefined ? (
+                                                    <div className="font-light">
+                                                        Under review
+                                                    </div>
+                                                ) : ( */}
+                                                {totaledBalances[item.slug]
+                                                    ?.totalAmount == null ? (
+                                                    <div className="font-light">
+                                                        Under review
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        ₿{" "}
+                                                        {Number(
+                                                            totaledBalances[
+                                                                item.slug
+                                                            ]?.totalAmount ?? 0,
+                                                        ).toLocaleString(
+                                                            "en-US",
+                                                            {
+                                                                minimumFractionDigits: 0,
+                                                                maximumFractionDigits: 0,
+                                                            },
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Link>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </CardContent>
+        </Card>
     );
 };
 

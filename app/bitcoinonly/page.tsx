@@ -1,6 +1,6 @@
 import { allLayers } from "@/util/layer_index";
 import { allInfrastructures } from "@/util/infrastructure_index";
-import BitcoinonlyTable from "@/components/tables/bitcoinonlyTable";
+import BitcoinonlyTable from "@/components/tables/bitcoinonly-table";
 import Hero from "@/components/hero";
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
     const typeFilters = [
         ...new Set(
             sortedEverything.map((item) =>
-                "layerType" in item ? item.layerType : item.infrastructureType,
+                "layerType" in item ? item.entityType : item.entityType,
             ),
         ),
     ];

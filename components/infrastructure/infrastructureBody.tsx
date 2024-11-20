@@ -1,15 +1,14 @@
 import React from "react";
-import { Infrastructure } from "./infrastructureProps";
-import Link from "next/link";
 import { parseTextWithLinks } from "@/util/parseTextWithLinks";
+import { Project } from "@/content/props";
 
-const InfrastructureBody: React.FC<{ infrastructure: Infrastructure }> = ({
+const InfrastructureBody: React.FC<{ infrastructure: Project }> = ({
     infrastructure,
 }) => {
     return (
         <main className="content flex-grow sm:mt-0 pt-0">
             {infrastructure.sections.map((section, index) => (
-                <div
+                <section
                     key={index}
                     className="self-stretch lg:px-8 px-4 pt-6 pb-8 mb-6 bg-white rounded-xl border border-slate-300 flex-col justify-center items-end gap-4"
                     id={section.id}
@@ -34,7 +33,7 @@ const InfrastructureBody: React.FC<{ infrastructure: Infrastructure }> = ({
                             </div>
                         </React.Fragment>
                     ))}
-                </div>
+                </section>
             ))}
         </main>
     );

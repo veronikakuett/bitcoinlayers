@@ -1,17 +1,17 @@
 "use client";
 
-import useGetCurrentBalancesPerLayer from "@/hooks/use-get-current-balances-perlayer";
-import { Layer } from "./layerProps";
-import { useParams } from "next/navigation";
 import { useMemo } from "react";
+import { LayerProject } from "@/content/props";
+import useGetLayertvlCurrentAll from "@/hooks/use-get-layertvl-current-all";
 
-const Categories: React.FC<{ layer: Layer }> = ({ layer }) => {
-    const { slug } = useParams();
-
-    const { data: balances } = useGetCurrentBalancesPerLayer();
+const Categories: React.FC<{ layer: LayerProject }> = ({ layer }) => {
+    const { data: balances } = useGetLayertvlCurrentAll({
+        queryString: `?layer_slug=ilike.${layer.slug}`,
+    });
 
     const matchingBalance = useMemo(() => {
         if (!balances) return null;
+
         return balances.find((balance) => balance.layer_slug === layer.slug);
     }, [balances, layer.slug]);
 
@@ -27,13 +27,15 @@ const Categories: React.FC<{ layer: Layer }> = ({ layer }) => {
                 <div className="text-text_primary text-sm leading-tight">
                     Type
                 </div>
-                <div className="text-text_header">{layer.layerType}</div>
+                <div className="text-text_header">{layer.entityType}</div>
             </div>
             <div className="flex-col justify-center items-start pl-4 lg:pl-0">
                 <div className="text-text_primary text-sm leading-tight">
                     Fee Token
                 </div>
-                <div className="text-text_header">{layer.feeToken}</div>
+                <div className="text-text_header">
+                    {(layer as LayerProject).feeToken}
+                </div>
             </div>
             <div className="flex-col justify-center items-start pl-4 lg:pl-0">
                 <div className="text-text_primary text-sm leading-tight">

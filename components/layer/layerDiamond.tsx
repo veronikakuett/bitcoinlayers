@@ -1,4 +1,3 @@
-import { Layer } from "./layerProps";
 import { getRiskColorBackground, getRiskColorIcon } from "@/util/riskColors";
 import RiskSnapshot from "./riskSnapshot";
 import RiskIconBridge from "@/components/icons/RiskIconBridge";
@@ -6,8 +5,9 @@ import RiskIconDA from "@/components/icons/RiskIconDA";
 import RiskIconOperators from "@/components/icons/RiskIconOperators";
 import RiskIconSettlement from "@/components/icons/RiskIconSettlement";
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
+import { LayerProject } from "@/content/props";
 
-const LayerDiamond: React.FC<{ layer: Layer }> = ({ layer }) => {
+const LayerDiamond: React.FC<{ layer: LayerProject }> = ({ layer }) => {
     const containerSize = 350;
     const svgDivSize = containerSize / 2;
     const svgSize = 215;
@@ -84,7 +84,7 @@ const LayerDiamond: React.FC<{ layer: Layer }> = ({ layer }) => {
 
     const riskLabels = [
         {
-            text: "BRIDGE",
+            text: "CUSTODY",
             className:
                 "left-[10px] top-[155px] -rotate-45 origin-top-left text-left",
         },
@@ -124,7 +124,7 @@ const LayerDiamond: React.FC<{ layer: Layer }> = ({ layer }) => {
         <>
             {diamondPositions.map((position, index) =>
                 renderDiamond(
-                    layer.riskAnalysis[index].tier,
+                    (layer as LayerProject).riskAnalysis[index].tier,
                     position.top,
                     position.left,
                     position.Icon,

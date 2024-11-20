@@ -1,22 +1,46 @@
 import FilterPopover from "./filter-popover";
 import { useQueryState } from "nuqs";
 
+const getFilterType = (headerName: string): "type" | "status" => {
+    switch (headerName.toLowerCase()) {
+        case "type":
+            return "type";
+        case "status":
+            return "status";
+        default:
+            return "type"; // fallback, though this shouldn't happen
+    }
+};
+
 interface TableHeaderProps {
     headers: {
         name: string;
         filterOptions?: string[];
         showSorting?: boolean;
+        filterQueryParam?: string;
     }[];
     onSort: (header: string) => void;
+    sortByQueryParam?: string;
+    sortOrderQueryParam?: string;
+    filterQueryParam?: string;
 }
 
-const TableHeader: React.FC<TableHeaderProps> = ({ headers, onSort }) => {
+const TableHeader: React.FC<TableHeaderProps> = ({
+    headers,
+    onSort,
+    sortByQueryParam = "sortBy",
+    sortOrderQueryParam = "sortOrder",
+}) => {
     const handleSort = (header: string) => {
         onSort(header);
     };
 
-    const [sortBy] = useQueryState("sortBy", { defaultValue: "Name" });
-    const [sortOrder] = useQueryState("sortOrder", { defaultValue: "asc" });
+    const [sortBy] = useQueryState(sortByQueryParam, {
+        defaultValue: "Name",
+    });
+    const [sortOrder] = useQueryState(sortOrderQueryParam, {
+        defaultValue: "asc",
+    });
 
     return (
         <thead className="bg-table_header">
@@ -33,13 +57,20 @@ const TableHeader: React.FC<TableHeaderProps> = ({ headers, onSort }) => {
                                 </div>
                             </div>
                             <div className="relative flex items-center">
-                                {header.filterOptions && (
-                                    <div className="relative mr-2">
-                                        <FilterPopover
-                                            filters={header.filterOptions}
-                                        />
-                                    </div>
-                                )}
+                                {header.filterOptions &&
+                                    header.filterOptions?.length > 0 && (
+                                        <div className="relative mr-2">
+                                            <FilterPopover
+                                                filterType={
+                                                    header.filterQueryParam ??
+                                                    getFilterType(header.name)
+                                                }
+                                                filterOptions={
+                                                    header.filterOptions
+                                                }
+                                            />
+                                        </div>
+                                    )}
                                 {header.showSorting && (
                                     <div className="relative lg:w-[11px] lg:h-[22px] w-[8px] h-[18px] ml-2 flex flex-col items-center justify-center">
                                         <div

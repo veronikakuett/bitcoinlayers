@@ -1,8 +1,12 @@
+"use client";
+
 import { allLayers } from "@/util/layer_index";
 import { allInfrastructures } from "@/util/infrastructure_index";
 
 import StakingTable from "@/components/tables/staking-table";
 import Hero from "@/components/hero";
+import AggregatedTVLChart from "@/components/charts/aggregated-tvl-chart";
+import useGetInfratvlHistoricalStaked from "@/hooks/use-get-infratvl-historical-staked";
 
 export default function StakingPage() {
     const sortedEverything = [...allLayers, ...allInfrastructures]
@@ -12,11 +16,7 @@ export default function StakingPage() {
         );
 
     const typeFilters = [
-        ...new Set(
-            sortedEverything.map((item) =>
-                "layerType" in item ? item.layerType : item.infrastructureType,
-            ),
-        ),
+        ...new Set(sortedEverything.map((item) => item.entityType)),
     ];
 
     const layerHeaders = [
@@ -33,7 +33,7 @@ export default function StakingPage() {
             filterOptions: typeFilters,
         },
         { name: "Status", showSorting: true, mobileLabel: "Status" },
-        { name: "Category", showSorting: true, mobileLabel: "Category" },
+        { name: "TVL", showSorting: true, mobileLabel: "TVL" },
     ];
 
     return (
@@ -42,6 +42,16 @@ export default function StakingPage() {
                 title="Staking"
                 description="Not every bitcoin staking protocol is equal."
             />
+            <div className="mb-24 lg:mb-12 w-full lg:max-w-5xl mx-auto">
+                <AggregatedTVLChart
+                    title="Staking TVL"
+                    description="Total amount of BTC locked in staking protocols"
+                    itemNameKey="infra_name"
+                    chartQueryParam="staking-chart"
+                    rangeQueryParam="staking-range"
+                    useDataHook={useGetInfratvlHistoricalStaked}
+                />
+            </div>
             <div className="lg:flex mb-4 justify-center w-full lg:max-w-5xl mx-auto">
                 <StakingTable data={sortedEverything} headers={layerHeaders} />
             </div>

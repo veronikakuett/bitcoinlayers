@@ -1,6 +1,6 @@
 import { allInfrastructures } from "@/util/infrastructure_index";
 import Hero from "@/components/hero";
-import InfrastructureTable from "@/components/tables/infrastructureTable";
+import InfrastructureTable from "@/components/tables/infrastructure-table";
 
 export default function Home() {
     const sortedInfrastructures = allInfrastructures.sort((a, b) =>
@@ -10,7 +10,7 @@ export default function Home() {
     const typeFilters = [
         ...new Set(
             sortedInfrastructures.map(
-                (infrastructure) => infrastructure.infrastructureType,
+                (infrastructure) => infrastructure.entityType,
             ),
         ),
     ];
